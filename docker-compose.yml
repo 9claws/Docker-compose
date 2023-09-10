@@ -1,0 +1,46 @@
+version: '2.21.0'
+
+volumes:
+  pgdata:
+services:
+  db:
+    image: postgres:alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=test_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1234567890
+    volumes: 
+      - pgdata:/var/lib/postgresql/data
+  
+  backend:
+    image: garpusha/compose:latest
+    restart: on-failure:3
+    depends_on:
+      - db
+    environment:
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=test_db
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=1234567890
+#    command: 
+#        sh "python3 manage.py collectstatic --noinput"
+    volumes:
+      - ./static:/var/www/crud/static
+      - ./media:/var/www/crud/media
+#    ports:
+#      - 8000:8000
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./static:/var/www/crud/static:ro
+      - ./media:/var/www/crud/media:ro
+    ports:
+      - 88:80
